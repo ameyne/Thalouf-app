@@ -18,7 +18,8 @@ TEAL = "#2E5D57"
 VIOLET = "#6E5B8C"
 INK = "#1F3330"
 
-st.set_page_config(page_title="Caisse Elmoutahalivin — Espace membres", page_icon="📒", layout="wide")
+LOGO_PATH = Path(__file__).parent / "data" / "logo.png"
+st.set_page_config(page_title="Caisse Elmoutahalivin — Espace membres", page_icon=str(LOGO_PATH), layout="wide")
 
 st.markdown(
     """
@@ -63,7 +64,7 @@ via, size_dist, kpi = data["via"], data["size_dist"], data["kpi"]
 # ---------------------------------------------------------------------------
 # Sidebar
 # ---------------------------------------------------------------------------
-st.sidebar.image(str(Path(__file__).parent / "data" / "logo.png"), use_container_width=True)
+st.sidebar.image(str(LOGO_PATH), use_container_width=True)
 st.sidebar.markdown(f"**Connecté(e) :** {user['display_name']}")
 logout_button()
 st.sidebar.divider()
@@ -93,10 +94,24 @@ if view == "Ma situation":
             st.warning("Aucune cotisation trouvée à ton nom pour l'instant.")
         else:
             r = row.iloc[0]
-            c1, c2, c3 = st.columns(3)
+            c1, c2, c3, c4 = st.columns(4)
             c1.metric("Total cotisé", f"{r['total_cotise']:,.0f} MRU".replace(",", " "))
             c2.metric("Nombre de versements", int(r["n_versements"]))
             c3.metric("Dernier versement", pd.to_datetime(r["dernier_versement"]).strftime("%d/%m/%Y"))
+            dette = r["dette"]
+            c4.metric("Dette actuelle", f"{dette:,.0f} MRU".replace(",", " "),
+                      delta=None if dette == 0 else "en retard", delta_color="inverse")
+
+            if dette > 0:
+                mois_retard = int(round(dette / 300))
+                st.warning(
+                    f"⚠️ Arriéré estimé à ce jour : **{dette:,.0f} MRU**".replace(",", " ")
+                    + f" (environ {mois_retard} mois de cotisation à 300 MRU/mois), "
+                    f"sur la base de {int(r['mois_attendus'])} mois attendus depuis ton premier versement "
+                    f"({pd.to_datetime(r['premier_versement']).strftime('%d/%m/%Y')})."
+                )
+            else:
+                st.success("✅ Aucun arriéré : tes cotisations sont à jour par rapport au mois actuel.")
 
             st.subheader("Historique de mes versements")
             my_history = member_detail[member_detail["Nom Complet"] == my_name][["Date", "Montant", "Reçu n°"]]

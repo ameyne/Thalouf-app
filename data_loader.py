@@ -115,6 +115,18 @@ def load_all_data(share_url: str):
         premier_versement=("Date", "min"),
     ).reset_index().sort_values("total_cotise", ascending=False)
 
+    # dette (arriérés) par rapport au mois actuel : 300 MRU attendus par mois
+    # depuis le premier versement de chaque membre jusqu'au mois en cours (inclus).
+    COTISATION_MENSUELLE = 300
+    now = pd.Timestamp.now()
+
+    def mois_attendus(premier_versement):
+        return (now.year - premier_versement.year) * 12 + (now.month - premier_versement.month) + 1
+
+    members["mois_attendus"] = members["premier_versement"].apply(mois_attendus)
+    members["montant_attendu"] = members["mois_attendus"] * COTISATION_MENSUELLE
+    members["dette"] = (members["montant_attendu"] - members["total_cotise"]).clip(lower=0)
+
     # dec categories
     dec_cat = dec_real.groupby("Categorie")["Montant"].agg(total=lambda x: x.abs().sum(), n="count").reset_index()
     dec_cat.columns = ["cat", "total", "n"]
