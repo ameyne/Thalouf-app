@@ -98,20 +98,24 @@ if view == "Ma situation":
             c1.metric("Total cotisé", f"{r['total_cotise']:,.0f} MRU".replace(",", " "))
             c2.metric("Nombre de versements", int(r["n_versements"]))
             c3.metric("Dernier versement", pd.to_datetime(r["dernier_versement"]).strftime("%d/%m/%Y"))
-            dette = r["dette"]
-            c4.metric("Dette actuelle", f"{dette:,.0f} MRU".replace(",", " "),
-                      delta=None if dette == 0 else "en retard", delta_color="inverse")
-
-            if dette > 0:
-                mois_retard = int(round(dette / 300))
-                st.warning(
-                    f"⚠️ Arriéré estimé à ce jour : **{dette:,.0f} MRU**".replace(",", " ")
-                    + f" (environ {mois_retard} mois de cotisation à 300 MRU/mois), "
-                    f"sur la base de {int(r['mois_attendus'])} mois attendus depuis ton premier versement "
-                    f"({pd.to_datetime(r['premier_versement']).strftime('%d/%m/%Y')})."
-                )
+            dette = r.get("dette", None)
+            if dette is None:
+                c4.metric("Dette actuelle", "—")
+                st.info("Le calcul de la dette n'est pas encore disponible (mise à jour en cours).")
             else:
-                st.success("✅ Aucun arriéré : tes cotisations sont à jour par rapport au mois actuel.")
+                c4.metric("Dette actuelle", f"{dette:,.0f} MRU".replace(",", " "),
+                          delta=None if dette == 0 else "en retard", delta_color="inverse")
+
+                if dette > 0:
+                    mois_retard = int(round(dette / 300))
+                    st.warning(
+                        f"⚠️ Arriéré estimé à ce jour : **{dette:,.0f} MRU**".replace(",", " ")
+                        + f" (environ {mois_retard} mois de cotisation à 300 MRU/mois), "
+                        f"sur la base de {int(r.get('mois_attendus', 0))} mois attendus depuis ton premier versement "
+                        f"({pd.to_datetime(r['premier_versement']).strftime('%d/%m/%Y')})."
+                    )
+                else:
+                    st.success("✅ Aucun arriéré : tes cotisations sont à jour par rapport au mois actuel.")
 
             st.subheader("Historique de mes versements")
             my_history = member_detail[member_detail["Nom Complet"] == my_name][["Date", "Montant", "Reçu n°"]]
